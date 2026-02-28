@@ -1,0 +1,25 @@
+# Operational output — never commit loot or results (except .gitkeep)
+loot/*
+!loot/.gitkeep
+results/*
+!results/.gitkeep
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.venv/
+venv/
+*.egg-info/
+
+# Editor artifacts
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
