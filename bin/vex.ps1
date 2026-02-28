@@ -269,8 +269,8 @@ function Show-Usage {
 Usage:
   vex <category> <script> [args...]       Run a module script
   vex <category> <script> -ai [args...]   Run with AI-assisted context
-  vex list [category]                     List available modules
-  vex help                                Show this help
+  vex -l [category]                       List available modules
+  vex -h                                  Show this help
 
 Categories:
 $cats
@@ -279,7 +279,7 @@ Examples:
   vex web recon -t https://example.com
   vex network port_scan 192.168.1.0/24
   vex active-directory kerberoast -d corp.local -u admin -p pass
-  vex list web
+  vex -l web
 "@
 }
 
@@ -288,13 +288,16 @@ Examples:
 # ---------------------------------------------------------------------------
 Show-Banner
 
-$cmd = if ($args.Count -gt 0) { $args[0] } else { "help" }
+$cmd = if ($args.Count -gt 0) { $args[0] } else { $null }
 
 switch ($cmd) {
-    { $_ -in @("help", "--help", "-h") } {
+    $null {
+        # No arguments — just the splash screen (already shown above)
+    }
+    { $_ -in @("--help", "-h") } {
         Show-Usage
     }
-    "list" {
+    { $_ -in @("--list", "-l") } {
         $cat = if ($args.Count -gt 1) { $args[1] } else { "" }
         Show-Modules $cat
     }

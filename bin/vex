@@ -66,8 +66,8 @@ usage() {
 Usage:
   vex <category> <script> [args...]       Run a module script
   vex <category> <script> -ai [args...]   Run with AI-assisted context
-  vex list [category]                      List available modules
-  vex help                                 Show this help
+  vex -l [category]                        List available modules
+  vex -h                                   Show this help
 
 Categories:
 $(list_categories "  ")
@@ -76,7 +76,7 @@ Examples:
   vex web recon.py -t example.com
   vex network port_scan.sh 192.168.1.0/24
   vex active-directory kerberoast.py -ai -d corp.local
-  vex list web
+  vex -l web
 EOF
 }
 
@@ -277,11 +277,14 @@ EOF
 # ---------------------------------------------------------------------------
 print_banner
 
-case "${1:-help}" in
-  help|--help|-h)
+case "${1:-}" in
+  "")
+    # No arguments — just the splash screen (already printed above)
+    ;;
+  --help|-h)
     usage
     ;;
-  list)
+  --list|-l)
     list_modules "${2:-}"
     ;;
   *)
