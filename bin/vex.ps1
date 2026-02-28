@@ -42,14 +42,14 @@ function Show-Banner {
         default   { "Linux" }
     }
     Write-Host ""
-    Write-Host " /`$`$    /`$`$ /`$`$`$`$`$`$`$`$`$ /`$`$   /`$`$" -ForegroundColor DarkCyan
-    Write-Host "| `$`$   | `$`$| `$`$_____/| `$`$  / `$`$" -ForegroundColor DarkCyan
-    Write-Host "| `$`$   | `$`$| `$`$      |  `$`$/ `$`$/" -ForegroundColor DarkCyan
-    Write-Host "|  `$`$ / `$`$/| `$`$`$`$`$    \  `$`$`$`$/" -ForegroundColor DarkCyan
-    Write-Host " \  `$`$ `$`$/ | `$`$__/     >`$`$  `$`$" -ForegroundColor DarkCyan
-    Write-Host "  \  `$`$`$`$/  | `$`$       /`$`$`$/\  `$`$" -ForegroundColor DarkCyan
-    Write-Host "   \  `$`$/   | `$`$`$`$`$`$`$`$`$| `$`$  \ `$`$" -ForegroundColor DarkCyan
-    Write-Host "    \_/    |________/|__/  |__/" -ForegroundColor DarkCyan
+    Write-Host  '$$\    $$\ $$$$$$$$\ $$\   $$\' -ForegroundColor DarkCyan
+    Write-Host  '$$ |   $$ |$$  _____|$$ |  $$ |' -ForegroundColor DarkCyan
+    Write-Host  '$$ |   $$ |$$ |      \$$\ $$  |' -ForegroundColor DarkCyan
+    Write-Host  '\$$\  $$  |$$$$$\     \$$$$  /' -ForegroundColor DarkCyan
+    Write-Host  ' \$$\$$  / $$  __|    $$  $$<' -ForegroundColor DarkCyan
+    Write-Host  '  \$$$  /  $$ |      $$  /\$$\' -ForegroundColor DarkCyan
+    Write-Host  '   \$  /   $$$$$$$$\ $$ /  $$ |' -ForegroundColor DarkCyan
+    Write-Host  '    \_/    \________|\__|  \__|' -ForegroundColor DarkCyan
     Write-Host ""
     Write-Host "  VOLATILE EXECUTION X-TENSION" -ForegroundColor Cyan
     Write-Host " [ Red Team Script Management Framework ]" -ForegroundColor Gray
