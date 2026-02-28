@@ -25,7 +25,8 @@
 ```
 VEX/
 ├── bin/
-│   └── vex                 # Master CLI entry-point
+│   ├── vex                 # Master CLI entry-point (Bash)
+│   └── vex.bat             # Windows CMD / PowerShell launcher
 ├── modules/
 │   ├── web/                # Web application exploitation
 │   ├── mobile/             # APK/iOS assessment tools
@@ -48,6 +49,7 @@ VEX/
 
 ## Quick Start
 
+**Linux / macOS (Bash)**
 ```bash
 # Make the CLI available on your PATH
 export PATH="$PATH:$(pwd)/bin"
@@ -66,6 +68,21 @@ vex web recon -t https://target.example.com
 
 # Run with AI-assisted context (requires VEX_AI_KEY env var)
 vex active-directory kerberoast -ai -d corp.local -u user -p pass
+```
+
+**Windows (CMD / PowerShell)**
+
+`bin\vex.bat` is automatically picked up when `VEX\bin` is on your `PATH`.
+It requires **WSL** (Windows Subsystem for Linux), **Git for Windows (Git Bash)**, or **MSYS2**.
+
+```bat
+:: Add to PATH permanently via System Properties → Environment Variables,
+:: or temporarily in the current session:
+set PATH=%PATH%;C:\path\to\VEX\bin
+
+vex help
+vex list
+vex web recon -t https://target.example.com
 ```
 
 ---
