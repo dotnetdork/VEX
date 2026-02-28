@@ -1,0 +1,270 @@
+#!/usr/bin/env bash
+# =============================================================================
+# V.E.X. — Volatile Execution X-tension
+# Master CLI entry-point
+# =============================================================================
+
+set -euo pipefail
+
+# ---------------------------------------------------------------------------
+# Paths
+# ---------------------------------------------------------------------------
+VEX_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+MODULES_DIR="${VEX_ROOT}/modules"
+LIB_DIR="${VEX_ROOT}/lib"
+
+# ---------------------------------------------------------------------------
+# Source shared helpers if available
+# ---------------------------------------------------------------------------
+[[ -f "${LIB_DIR}/utils.sh" ]] && source "${LIB_DIR}/utils.sh"
+
+# ---------------------------------------------------------------------------
+# Banner
+# ---------------------------------------------------------------------------
+print_banner() {
+  cat <<'BANNER'
+
+ /$$    /$$ /$$$$$$$$ /$$   /$$
+| $$   | $$| $$_____/| $$  / $$
+| $$   | $$| $$      |  $$/ $$/
+|  $$ / $$/| $$$$$    \  $$$$/
+ \  $$ $$/ | $$__/     >$$  $$
+  \  $$$/  | $$       /$$/\  $$
+   \  $/   | $$$$$$$$| $$  \ $$
+    \_/    |________/|__/  |__/
+
+  VOLATILE EXECUTION X-TENSION
+ [ Red Team Script Management Framework ]
+
+BANNER
+}
+
+# ---------------------------------------------------------------------------
+# Usage
+# ---------------------------------------------------------------------------
+usage() {
+  cat <<EOF
+Usage:
+  vex <category> <script> [args...]       Run a module script
+  vex <category> <script> -ai [args...]   Run with AI-assisted context
+  vex list [category]                      List available modules
+  vex help                                 Show this help
+
+Categories:
+$(list_categories "  ")
+
+Examples:
+  vex web recon.py -t example.com
+  vex network port_scan.sh 192.168.1.0/24
+  vex active-directory kerberoast.py -ai -d corp.local
+  vex list web
+EOF
+}
+
+# ---------------------------------------------------------------------------
+# List available categories
+# ---------------------------------------------------------------------------
+list_categories() {
+  local prefix="${1:-}"
+  for dir in "${MODULES_DIR}"/*/; do
+    [[ -d "$dir" ]] && printf '%s%s\n' "$prefix" "$(basename "$dir")"
+  done
+}
+
+# ---------------------------------------------------------------------------
+# List scripts in a category (or all categories)
+# ---------------------------------------------------------------------------
+list_modules() {
+  local category="${1:-}"
+
+  if [[ -n "$category" ]]; then
+    local cat_path="${MODULES_DIR}/${category}"
+    if [[ ! -d "$cat_path" ]]; then
+      echo "[!] Unknown category: ${category}" >&2
+      echo "    Available: $(list_categories)" >&2
+      exit 1
+    fi
+    echo "[*] Scripts in '${category}':"
+    _list_scripts_in "$cat_path" "  "
+  else
+    echo "[*] All available modules:"
+    for dir in "${MODULES_DIR}"/*/; do
+      [[ -d "$dir" ]] || continue
+      echo "  [$(basename "${dir%/}")]"
+      # Remove trailing slash for listing
+      _list_scripts_in "${dir%/}" "    "
+    done
+  fi
+}
+
+# Print executable scripts in a directory
+_list_scripts_in() {
+  local dir="$1" prefix="${2:-  }"
+  local found=0
+  while IFS= read -r -d '' file; do
+    printf '%s%s\n' "$prefix" "$(basename "$file")"
+    found=1
+  done < <(find "$dir" -maxdepth 1 \( -name "*.py" -o -name "*.sh" -o -perm /111 \) -not -type d -print0 2>/dev/null | sort -z)
+  [[ $found -eq 0 ]] && printf '%s%s\n' "$prefix" "(no scripts yet)" || true
+}
+
+# ---------------------------------------------------------------------------
+# Resolve and execute a script dynamically
+# ---------------------------------------------------------------------------
+run_module() {
+  local category="$1"
+  local script_name="$2"
+  shift 2
+  local remaining_args=("$@")
+
+  # Detect and strip -ai flag
+  local ai_mode=false
+  local exec_args=()
+  for arg in "${remaining_args[@]}"; do
+    if [[ "$arg" == "-ai" ]]; then
+      ai_mode=true
+    else
+      exec_args+=("$arg")
+    fi
+  done
+
+  local cat_path="${MODULES_DIR}/${category}"
+  if [[ ! -d "$cat_path" ]]; then
+    echo "[!] Unknown category: ${category}" >&2
+    echo "    Run 'vex list' to see available categories." >&2
+    exit 1
+  fi
+
+  # Dynamic discovery — find the script by name (with or without extension)
+  local target
+  target="$(find_script "$cat_path" "$script_name")"
+  if [[ -z "$target" ]]; then
+    echo "[!] Script '${script_name}' not found in category '${category}'." >&2
+    echo "    Run 'vex list ${category}' to see available scripts." >&2
+    exit 1
+  fi
+
+  # AI-mode header
+  if $ai_mode; then
+    ai_context "$category" "$target" "${exec_args[@]:-}"
+  fi
+
+  execute_script "$target" "${exec_args[@]:-}"
+}
+
+# ---------------------------------------------------------------------------
+# Dynamic script finder
+#   Searches for exact name match, then tries appending .py / .sh
+# ---------------------------------------------------------------------------
+find_script() {
+  local dir="$1"
+  local name="$2"
+  local candidate
+
+  # Exact match
+  candidate="${dir}/${name}"
+  if [[ -f "$candidate" ]]; then
+    echo "$candidate"; return
+  fi
+
+  # Try known extensions
+  for ext in .py .sh; do
+    candidate="${dir}/${name}${ext}"
+    if [[ -f "$candidate" ]]; then
+      echo "$candidate"; return
+    fi
+  done
+
+  # Fuzzy: any executable whose basename (without extension) matches
+  while IFS= read -r -d '' file; do
+    local base
+    base="$(basename "$file")"
+    base="${base%.*}"
+    if [[ "$base" == "$name" ]]; then
+      echo "$file"; return
+    fi
+  done < <(find "$dir" -maxdepth 1 -type f -print0 2>/dev/null)
+}
+
+# ---------------------------------------------------------------------------
+# Execute a script based on its type
+# ---------------------------------------------------------------------------
+execute_script() {
+  local script="$1"
+  shift
+  local args=("$@")
+
+  if [[ ! -f "$script" ]]; then
+    echo "[!] Script not found: ${script}" >&2
+    exit 1
+  fi
+
+  echo "[>] Executing: $(basename "$script") ${args[*]:-}"
+  echo ""
+
+  case "$script" in
+    *.py)
+      python3 "$script" "${args[@]:-}"
+      ;;
+    *.sh)
+      bash "$script" "${args[@]:-}"
+      ;;
+    *)
+      # Compiled binary or other executable
+      if [[ -x "$script" ]]; then
+        "$script" "${args[@]:-}"
+      else
+        echo "[!] Cannot determine how to execute: ${script}" >&2
+        echo "    Ensure the file is executable or has a recognised extension (.py / .sh)." >&2
+        exit 1
+      fi
+      ;;
+  esac
+}
+
+# ---------------------------------------------------------------------------
+# AI context stub — outputs metadata about the script being run.
+# Replace the body with an actual LLM API call when ready.
+# ---------------------------------------------------------------------------
+ai_context() {
+  local category="$1"
+  local script="$2"
+  shift 2
+  local args=("$@")
+
+  cat <<EOF
+[AI] ── VEX AI-Assist ─────────────────────────────────────────────────────
+  Category : ${category}
+  Script   : $(basename "$script")
+  Args     : ${args[*]:-<none>}
+  Path     : ${script}
+
+  [AI] Analysing script capabilities…
+$(head -20 "$script" 2>/dev/null | sed 's/^/  /')
+  ──────────────────────────────────────────────────────────────────────────
+  NOTE: Full AI integration requires setting VEX_AI_KEY and pointing
+        lib/ai.sh at a supported LLM endpoint (see data/config.ini).
+────────────────────────────────────────────────────────────────────────────
+EOF
+}
+
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
+print_banner
+
+case "${1:-help}" in
+  help|--help|-h)
+    usage
+    ;;
+  list)
+    list_modules "${2:-}"
+    ;;
+  *)
+    if [[ $# -lt 2 ]]; then
+      usage
+      exit 1
+    fi
+    run_module "$1" "$2" "${@:3}"
+    ;;
+esac
