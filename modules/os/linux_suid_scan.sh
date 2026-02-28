@@ -8,6 +8,9 @@ set -euo pipefail
 
 source "$(dirname "$0")/../../lib/utils.sh"
 
+# SUID/SGID bits are a Linux-only concept
+require_linux
+
 OUTPUT_FILE=""
 
 usage() {

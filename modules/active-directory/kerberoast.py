@@ -10,6 +10,7 @@ Usage:
 """
 
 import argparse
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -25,17 +26,31 @@ def parse_args():
     return p.parse_args()
 
 
-def find_getuserspns():
-    """Locate impacket's GetUserSPNs.py."""
-    candidates = [
-        "GetUserSPNs.py",
+def find_getuserspns() -> str | None:
+    """Locate impacket's GetUserSPNs.py — works on Linux, macOS, and Windows."""
+    import sysconfig
+
+    # 1. In PATH (pip install impacket puts it here on all platforms)
+    found = shutil.which("GetUserSPNs.py") or shutil.which("GetUserSPNs")
+    if found:
+        return found
+
+    # 2. Derive from the active Python environment's script directory
+    scripts_dir = Path(sysconfig.get_path("scripts"))
+    for name in ("GetUserSPNs.py", "GetUserSPNs"):
+        candidate = scripts_dir / name
+        if candidate.exists():
+            return str(candidate)
+
+    # 3. Legacy hard-coded Linux paths
+    legacy = [
         "/usr/share/doc/python3-impacket/examples/GetUserSPNs.py",
         "/usr/lib/python3/dist-packages/impacket/examples/GetUserSPNs.py",
     ]
-    for c in candidates:
-        p = Path(c)
-        if p.exists():
-            return str(p)
+    for c in legacy:
+        if Path(c).exists():
+            return c
+
     return None
 
 
@@ -47,7 +62,7 @@ def main():
         sys.exit(1)
 
     target = f"{args.domain}/{args.user}:{args.password}"
-    cmd = ["python3", spns_script, target, "-request"]
+    cmd = [sys.executable, spns_script, target, "-request"]
     if args.dc_ip:
         cmd += ["-dc-ip", args.dc_ip]
     if args.output:

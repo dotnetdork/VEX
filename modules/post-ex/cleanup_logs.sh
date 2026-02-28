@@ -11,6 +11,11 @@ set -euo pipefail
 
 source "$(dirname "$0")/../../lib/utils.sh"
 
+# Windows is not supported for log cleanup (no concept of /var/log)
+if is_windows; then
+  die "cleanup_logs is not supported on Windows. Use WSL to target a Linux environment."
+fi
+
 DRY_RUN=false
 VERBOSE=false
 
@@ -34,16 +39,29 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-TARGETS=(
-  /var/log/auth.log
-  /var/log/syslog
-  /var/log/messages
-  /var/log/secure
-  /var/log/wtmp
-  /var/log/btmp
-  /root/.bash_history
-  /home/*/.bash_history
-)
+# Platform-specific target paths
+if is_linux; then
+  TARGETS=(
+    /var/log/auth.log
+    /var/log/syslog
+    /var/log/messages
+    /var/log/secure
+    /var/log/wtmp
+    /var/log/btmp
+    /root/.bash_history
+    /home/*/.bash_history
+  )
+elif is_macos; then
+  info "macOS detected — using macOS log paths."
+  TARGETS=(
+    /var/log/system.log
+    /var/log/install.log
+    /private/var/log/asl/*.asl
+    /root/.bash_history
+    /Users/*/.bash_history
+    /Users/*/.zsh_history
+  )
+fi
 
 info "Starting log cleanup (dry-run: ${DRY_RUN})…"
 

@@ -4,6 +4,37 @@
 #   source "$(dirname "$0")/../../lib/utils.sh"
 
 # ---------------------------------------------------------------------------
+# OS detection
+# ---------------------------------------------------------------------------
+_raw_os="$(uname -s 2>/dev/null || echo "Windows_NT")"
+case "$_raw_os" in
+  Linux*)              VEX_OS="linux"   ;;
+  Darwin*)             VEX_OS="macos"   ;;
+  MINGW*|MSYS*|CYGWIN*) VEX_OS="windows" ;;
+  Windows_NT*)         VEX_OS="windows" ;;
+  *)                   VEX_OS="unknown" ;;
+esac
+unset _raw_os
+
+is_linux()   { [[ "$VEX_OS" == "linux" ]];   }
+is_macos()   { [[ "$VEX_OS" == "macos" ]];   }
+is_windows() { [[ "$VEX_OS" == "windows" ]]; }
+
+# Require Linux or macOS — bail with a helpful message on Windows
+require_unix() {
+  if is_windows; then
+    die "This module only runs on Linux / macOS. On Windows, use WSL: wsl vex $*"
+  fi
+}
+
+# Require specifically Linux (for kernel-specific features like SUID, /proc, etc.)
+require_linux() {
+  if ! is_linux; then
+    die "This module is Linux-only (current OS: ${VEX_OS}). Run inside WSL for Windows support."
+  fi
+}
+
+# ---------------------------------------------------------------------------
 # Colour codes (disabled automatically when not a TTY)
 # ---------------------------------------------------------------------------
 if [[ -t 1 ]]; then
